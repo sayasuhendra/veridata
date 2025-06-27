@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class () extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      */
@@ -12,13 +13,20 @@ return new class () extends Migration {
     {
         Schema::create('receipts', function (Blueprint $table) {
             $table->id();
-            $table->timestamps();
-            $table->string('number');
-            $table->string('date');
-            $table->string('name');
-            $table->string('total');
-            $table->boolean('verified')->default(0); // 0 unverified, 1 verified
+            $table->string('vendor_name')->nullable();
+            $table->string('invoice_id')->nullable();
+            $table->date('invoice_date')->nullable();
+            $table->date('due_date')->nullable();
+            $table->decimal('total_amount', 15, 2)->nullable();
+            $table->decimal('tax_amount', 15, 2)->nullable();
+            $table->string('currency', 10)->nullable();
+            $table->string('original_file_path'); // Path file yang diupload
+            $table->json('line_items')->nullable();
+            $table->enum('status', ['pending', 'processing', 'failed', 'processed'])->default('pending');
+            $table->longText('ocr_text')->nullable();
+            $table->json('raw_ai_response')->nullable(); // Untuk menyimpan response mentah dari AI
             $table->text('notes')->nullable();
+            $table->timestamps();
         });
     }
 
