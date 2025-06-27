@@ -9,4 +9,6 @@ class Invoice extends Model
 {
     /** @use HasFactory<\Database\Factories\InvoiceFactory> */
     use HasFactory;
+
+    protected $guarded = [];
 }
