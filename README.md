@@ -1,61 +1,138 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+<?php
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+namespace App\Filament\Resources\Invoices\Schemas;
 
-## About Laravel
+set_time_limit(6000);
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Fieldset;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\Storage;
+use OpenAI\Laravel\Facades\OpenAI;
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+class InvoiceForm
+{
+    public static function configure(Schema $schema): Schema
+    {
+        return $schema
+            ->components([
+                FileUpload::make('original_file_path')
+                    ->label('Upload Invoice')
+                    ->disk('public')
+                    ->directory('invoices')
+                    ->required()
+                    ->live()
+                    ->afterStateUpdated(function (Set $set, $state) {
+                        if (! $state) {
+                            return;
+                        }
+                        $file = $state->getRealPath();
+                        // if (substr($file, -3) == 'pdf') {
+                        //     $pdf = new \Spatie\PdfToImage\Pdf($file);
+                        //     $image = $pdf->save(storage_path('app/public/invoices'));
+                        //     dd($image);
+                        // }
+                        $base64 = base64_encode(file_get_contents($file));
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+                        $data = self::extractInvoiceData($base64, $state->getMimeType());
+                        dd($data);
+                        // $this->invoice->update([
+                        //     'raw_text' => $ocrText,
+                        //     'invoice_number' => $data['invoice_number'] ?? null,
+                        //     'invoice_date' => $data['invoice_date'] ?? null,
+                        //     'vendor_name' => $data['vendor_name'] ?? null,
+                        //     'total_amount' => $data['total_amount'] ?? null,
+                        //     'line_items' => json_encode($data['line_items'] ?? []),
+                        // ]);
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+                        \Filament\Notifications\Notification::make()
+                            ->title('Berhasil')
+                            ->body($data)
+                            ->success()
+                            ->send();
+                        // Dapatkan path file yang baru diupload
+                        // $filePath = Storage::disk('public')->path($state->getRealPath());
+                        // $mimeType = $state->getMimeType();
+                        //
+                        // // Panggil service AI kita
+                        // $aiService = new DocumentAIService;
+                        // $extractedData = $aiService->processInvoice($filePath, $mimeType);
+                        //
+                        // if ($extractedData) {
+                        //     // Isi form lain dengan data dari AI
+                        //     $set('vendor_name', $extractedData['supplier_name'] ?? null);
+                        //     $set('invoice_id', $extractedData['invoice_id'] ?? null);
+                        //     $set('invoice_date', $extractedData['invoice_date'] ?? null);
+                        //     $set('due_date', $extractedData['due_date'] ?? null);
+                        //
+                        //     // Untuk angka, bersihkan dulu dari simbol mata uang atau koma
+                        //     $total = preg_replace('/[^0-9.]/', '', $extractedData['total_amount'] ?? '0');
+                        //     $tax = preg_replace('/[^0-9.]/', '', $extractedData['total_tax_amount'] ?? '0');
+                        //
+                        //     $set('total_amount', $total);
+                        //     $set('tax_amount', $tax);
+                        //     $set('currency', $extractedData['currency'] ?? null);
+                        //
+                        //     // Simpan response mentah jika perlu
+                        //     $set('raw_ai_response', $extractedData['raw_response']);
+                        // } else {
+                        //     // Beri notifikasi jika gagal
+                        //     \Filament\Notifications\Notification::make()
+                        //         ->title('Processing Failed')
+                        //         ->body('Could not extract data from the document.')
+                        //         ->danger()
+                        //         ->send();
+                        // }
+                    }),
 
-## Learning Laravel
+                Fieldset::make('Extracted Information')
+                    ->schema([
+                        TextInput::make('vendor_name'),
+                        TextInput::make('invoice_id'),
+                        DatePicker::make('invoice_date'),
+                        DatePicker::make('due_date'),
+                        TextInput::make('total_amount')->numeric()->prefix('$'),
+                        TextInput::make('tax_amount')->numeric()->prefix('$'),
+                        TextInput::make('currency')->maxLength(10),
+                    ]),
+            ]);
+    }
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+    public static function extractInvoiceData($base64, $fileType)
+    {
+        $response = OpenAI::chat()->create([
+            'model' => 'gpt-4o',
+            'messages' => [
+                [
+                    'role' => 'user',
+                    'content' => [
+                        [
+                            'type' => 'image_url',
+                            'image_url' => [
+                                'url' => "data:$fileType;base64,$base64",
+                            ],
+                        ],
+                        [
+                            'type' => 'text',
+                            'text' => "Extract structured data from this invoice file as JSON:\n\nReturn format:\n".
+                        json_encode([
+                            'invoice_number' => 'INV-001',
+                            'invoice_date' => '2024-06-01',
+                            'vendor_name' => 'ABC Supplies',
+                            'total_amount' => '1234.56',
+                            'line_items' => [
+                                ['item' => 'Widget A', 'qty' => 2, 'price' => 500],
+                                ['item' => 'Widget B', 'qty' => 1, 'price' => 234.56],
+                            ],
+                        ], JSON_PRETTY_PRINT),
+                        ],
+                    ],
+                ],
+            ],
+        ]);
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
-
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-## Laravel Sponsors
-
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
-
-### Premium Partners
-
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
-
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+        return json_decode($response->choices[0]->message->content, true);
+    }
+}
