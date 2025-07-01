@@ -14,7 +14,12 @@ return new class extends Migration
         Schema::create('receipts', function (Blueprint $table) {
             $table->id();
             $table->string('vendor_name')->nullable();
-            $table->string('invoice_id')->nullable();
+            $table->string('vendor_email')->nullable();
+            $table->string('vendor_phone')->nullable();
+            $table->string('vendor_address')->nullable();
+            $table->string('bank_account')->nullable();
+            $table->string('account_number')->nullable();
+            $table->string('invoice_number')->nullable();
             $table->date('invoice_date')->nullable();
             $table->date('due_date')->nullable();
             $table->decimal('total_amount', 15, 2)->nullable();
@@ -23,7 +28,6 @@ return new class extends Migration
             $table->string('original_file_path'); // Path file yang diupload
             $table->json('line_items')->nullable();
             $table->enum('status', ['pending', 'processing', 'failed', 'processed'])->default('pending');
-            $table->longText('ocr_text')->nullable();
             $table->json('raw_ai_response')->nullable(); // Untuk menyimpan response mentah dari AI
             $table->text('notes')->nullable();
             $table->timestamps();
