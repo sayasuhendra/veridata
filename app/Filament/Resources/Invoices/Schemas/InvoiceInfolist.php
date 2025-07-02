@@ -13,13 +13,12 @@ class InvoiceInfolist
     public static function configure(Schema $schema): Schema
     {
           return $schema
-
           ->components([
-                    ImageEntry::make('original_file_path')
-                    ->label('Invoice')
-                    ->alignCenter()
-                    ->imageWidth('900')
-                    ->imageHeight('1200'),
+                              ImageEntry::make('original_file_path')
+                              ->label('Invoice')
+                              ->alignCenter()
+                              ->imageWidth('900')
+                              ->imageHeight('1200'),
                           
                     Section::make([
                               Fieldset::make('Invoice Information')

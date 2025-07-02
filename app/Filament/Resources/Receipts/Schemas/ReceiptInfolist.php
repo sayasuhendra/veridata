@@ -14,11 +14,13 @@ class ReceiptInfolist
     {
         return $schema
             ->components([
-          ImageEntry::make('original_file_path')
-          ->label('Receipt')
-          ->alignCenter()
-          ->imageWidth('900')
-          ->imageHeight('1200'),
+          Section::make([
+                    ImageEntry::make('original_file_path')
+                              ->label('Receipt')
+                              ->height(800)
+                              ->alignCenter(),
+          ]),
+
                 
           Section::make([
                     Fieldset::make('Receipt Information')
@@ -33,6 +35,7 @@ class ReceiptInfolist
                                 ->numeric(),
                             TextEntry::make('currency'),
                         ]),
+
                     Fieldset::make('Vendor Information')
                         ->schema([
                             TextEntry::make('vendor_name')
