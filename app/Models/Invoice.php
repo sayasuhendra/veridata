@@ -11,4 +11,9 @@ class Invoice extends Model
     use HasFactory;
 
     protected $guarded = [];
+
+    protected $casts = [
+        'line_items' => 'array',
+        'raw_ai_response' => 'array',
+    ];
 }

@@ -17,7 +17,17 @@ class InvoicesTable
             ->columns([
                 TextColumn::make('vendor_name')
                     ->searchable(),
-                TextColumn::make('invoice_id')
+                TextColumn::make('vendor_email')
+                    ->searchable(),
+                TextColumn::make('vendor_phone')
+                    ->searchable(),
+                TextColumn::make('vendor_address')
+                    ->searchable(),
+                TextColumn::make('bank_account')
+                    ->searchable(),
+                TextColumn::make('account_number')
+                    ->searchable(),
+                TextColumn::make('invoice_number')
                     ->searchable(),
                 TextColumn::make('invoice_date')
                     ->date()

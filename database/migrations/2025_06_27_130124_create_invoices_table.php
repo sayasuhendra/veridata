@@ -27,7 +27,7 @@ return new class extends Migration
             $table->string('currency', 10)->nullable();
             $table->string('original_file_path'); // Path file yang diupload
             $table->json('line_items')->nullable();
-            $table->enum('status', ['pending', 'processing', 'failed', 'processed'])->default('pending');
+            $table->string('status')->nullable();
             $table->json('raw_ai_response')->nullable(); // Untuk menyimpan response mentah dari AI
             $table->text('notes')->nullable();
             $table->timestamps();

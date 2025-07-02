@@ -17,9 +17,21 @@ class ReceiptsTable
             ->columns([
                 TextColumn::make('vendor_name')
                     ->searchable(),
-                TextColumn::make('invoice_id')
+                TextColumn::make('vendor_email')
                     ->searchable(),
-                TextColumn::make('invoice_date')
+                TextColumn::make('vendor_phone')
+                    ->searchable(),
+                TextColumn::make('vendor_address')
+                    ->searchable(),
+                TextColumn::make('bank_account')
+                    ->searchable(),
+                TextColumn::make('account_number')
+                    ->searchable(),
+                TextColumn::make('po_number')
+                    ->searchable(),
+                TextColumn::make('receipt_number')
+                    ->searchable(),
+                TextColumn::make('receipt_date')
                     ->date()
                     ->sortable(),
                 TextColumn::make('due_date')
@@ -34,8 +46,6 @@ class ReceiptsTable
                 TextColumn::make('currency')
                     ->searchable(),
                 TextColumn::make('original_file_path')
-                    ->searchable(),
-                TextColumn::make('status')
                     ->searchable(),
                 TextColumn::make('created_at')
                     ->dateTime()

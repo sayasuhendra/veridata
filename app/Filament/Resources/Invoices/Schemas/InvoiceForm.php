@@ -2,13 +2,17 @@
 
 namespace App\Filament\Resources\Invoices\Schemas;
 
-use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\TextInput;
-use Filament\Schemas\Components\Fieldset;
-use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use OpenAI\Laravel\Facades\OpenAI;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\FileUpload;
+use Filament\Schemas\Components\Fieldset;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
+use ValentinMorice\FilamentJsonColumn\JsonColumn;
 
 class InvoiceForm
 {
@@ -18,10 +22,9 @@ class InvoiceForm
             ->components([
                 FileUpload::make('original_file_path')
                     ->label('Upload Invoice')
-                    ->disk('public')
                     ->directory('invoices')
                     ->required()
-                    ->afterStateUpdated(function (Set $set, $state) {
+                    ->afterStateUpdated(function (Set $set, Get $get, $state) {
                         if (! $state) {
                             return;
                         }
@@ -30,33 +33,67 @@ class InvoiceForm
 
                             $data = self::extractInvoiceData($base64, $state->getMimeType());
                             $data = preg_replace('/^```json\s*(.*)\s*```$/s', '$1', $data);
-                            // $data = collect(json_decode(self::utf8ize($data));
-                            $data = json_decode($data, true);
-                            $set('vendor_name', $data['vendor_name'] ?? '');
-                            $set('invoice_id', $data['invoice_number'] ?? '');
-                            $set('invoice_date', $data['invoice_date'] ?? '');
-                            $set('due_date', $data['due_date'] ?? '');
-                            $set('total_amount', $data['total_amount'] ?? '');
-                            $set('tax_amount', $data['tax_amount'] ?? '');
-                            $set('currency', $data['currency'] ?? '');
+                            $data = json_decode($data);
+                            $set('vendor_name', $data->vendor_name ?? '');
+                            $set('vendor_email', $data->vendor_email ?? '');
+                            $set('vendor_phone', $data->vendor_phone ?? '');
+                            $set('vendor_address', $data->vendor_address ?? '');
+                            $set('bank_account', $data->bank_account ?? '');
+                            $set('account_number', $data->account_number ?? '');
+                            $set('invoice_number', $data->invoice_number ?? '');
+                            $set('invoice_date', $data->invoice_date ?? '');
+                            $set('due_date', $data->due_date ?? '');
+                            $set('total_amount', $data->total_amount ?? '');
+                            $set('tax_amount', $data->tax_amount ?? '');
+                            $set('currency', $data->currency ?? '');
+                            $set('status', !empty($data->status) ? $data->status : 'pending');
                         }
                     })
                     ->image()
-                    ->imagePreviewHeight('600')
+                    ->imagePreviewHeight('860')
                     ->openable()
                     ->maxSize(1024 * 5) // 5 MB
-                    ->acceptedFileTypes(['image/*', 'application/pdf']),
+                    ->acceptedFileTypes(['image/*']),
 
-                Fieldset::make('Extracted Information')
-                    ->schema([
-                        TextInput::make('vendor_name'),
-                        TextInput::make('invoice_id'),
-                        DatePicker::make('invoice_date'),
-                        DatePicker::make('due_date'),
-                        TextInput::make('total_amount')->numeric()->prefix('Rp'),
-                        TextInput::make('tax_amount')->numeric()->prefix('Rp'),
-                        TextInput::make('currency')->maxLength(10),
-                    ]),
+                Section::make([
+                    Fieldset::make('Invoice Information')
+                        ->schema([
+                            TextInput::make('invoice_number'),
+                            TextInput::make('total_amount')
+                                ->numeric(),
+                            DatePicker::make('invoice_date'),
+                            DatePicker::make('due_date'),
+                            TextInput::make('tax_amount')
+                                ->numeric(),
+                            TextInput::make('currency'),
+                            TextInput::make('status')
+                                ->default('pending'),
+                        ]),
+                    Fieldset::make('Vendor Information')
+                        ->schema([
+                            TextInput::make('vendor_name')
+                                ->label('Vendor Name'),
+                            TextInput::make('vendor_email')
+                                ->label('Vendor Email')
+                                ->email(),
+                            TextInput::make('vendor_phone')
+                                ->label('Vendor Phone')
+                                ->tel(),
+                            TextInput::make('vendor_address')
+                                ->label('Vendor Address'),
+                            TextInput::make('bank_account')
+                                ->label('Bank Account'),
+                            TextInput::make('account_number')
+                                ->label('Account Number'),
+                        ]),
+
+
+                        Fieldset::make('Additional Information')
+                        ->schema([
+                            Textarea::make('notes')
+                                ->columnSpanFull(),
+                        ]),
+                ]),
             ]);
     }
 
@@ -78,10 +115,19 @@ class InvoiceForm
                             'type' => 'text',
                             'text' => "Extract structured data from this invoice file as JSON:\n\nReturn format:\n".
                         json_encode([
-                            'invoice_number' => 'INV-001',
-                            'invoice_date' => '2024-06-01',
                             'vendor_name' => 'ABC Supplies',
+                            'vendor_email' => 'contact@abcsupplies.com',
+                            'vendor_phone' => '123-456-7890',
+                            'vendor_address' => '123 Supply St, Jakarta',
+                            'bank_account' => 'Bank Mandiri',
+                            'account_number' => '1234567890',
+                            'invoice_number' => 'INV-001',
+                            'invoice_date' => '2025-06-27',
+                            'due_date' => '2025-07-27',
                             'total_amount' => '1234.56',
+                            'tax_amount' => '123.45',
+                            'currency' => 'Rp',
+                            'status' => 'pending',
                             'line_items' => [
                                 ['item' => 'Widget A', 'qty' => 2, 'price' => 500],
                                 ['item' => 'Widget B', 'qty' => 1, 'price' => 234.56],
@@ -94,33 +140,5 @@ class InvoiceForm
         ]);
 
         return $response->choices[0]->message->content;
-    }
-
-    public static function utf8ize($d)
-    {
-        if (is_array($d)) {
-            foreach ($d as $k => $v) {
-                $d[$k] = self::utf8ize($v);
-            }
-        } elseif (is_object($d)) {
-            // Recursively convert object properties
-            $vars = get_object_vars($d);
-            foreach ($vars as $k => $v) {
-                $d->$k = self::utf8ize($v);
-            }
-        } elseif (is_string($d)) {
-            // Try a list of common encodings before converting
-            $encodings = ['UTF-8', 'ISO-8859-1', 'Windows-1251', 'Windows-1252', 'GB2312', 'BIG5'];
-            foreach ($encodings as $encoding) {
-                if (mb_check_encoding($d, $encoding)) {
-                    return mb_convert_encoding($d, 'UTF-8', $encoding);
-                }
-            }
-
-            // Use 'auto' as a last resort
-            return mb_convert_encoding($d, 'UTF-8', 'auto');
-        }
-
-        return $d;
     }
 }

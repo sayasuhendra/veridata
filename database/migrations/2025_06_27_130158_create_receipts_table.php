@@ -19,16 +19,17 @@ return new class extends Migration
             $table->string('vendor_address')->nullable();
             $table->string('bank_account')->nullable();
             $table->string('account_number')->nullable();
-            $table->string('invoice_number')->nullable();
-            $table->date('invoice_date')->nullable();
+            $table->string('po_number')->nullable();
+            $table->string('receipt_number')->nullable();
+            $table->date('receipt_date')->nullable();
             $table->date('due_date')->nullable();
             $table->decimal('total_amount', 15, 2)->nullable();
             $table->decimal('tax_amount', 15, 2)->nullable();
             $table->string('currency', 10)->nullable();
             $table->string('original_file_path'); // Path file yang diupload
             $table->json('line_items')->nullable();
-            $table->enum('status', ['pending', 'processing', 'failed', 'processed'])->default('pending');
             $table->json('raw_ai_response')->nullable(); // Untuk menyimpan response mentah dari AI
+            $table->text('term_conditions')->nullable();
             $table->text('notes')->nullable();
             $table->timestamps();
         });

@@ -5,8 +5,15 @@
     "description": "The skeleton application for the Laravel framework.",
     "keywords": ["laravel", "framework"],
     "license": "MIT",
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/sayasuhendra/filament-json-column"
+        }
+    ],
     "require": {
         "php": "^8.2",
+        "valentin-morice/filament-json-column": "dev-main",
         "filament/filament": "^4.0",
         "google/cloud-document-ai": "^2.2",
         "laravel/framework": "^12.0",
