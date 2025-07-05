@@ -1,5 +1,5 @@
 x-logging: &default-logging
-  driver: 'json-file'
+  driver: "json-file"
   options:
     max-size: "50m"
     max-file: 6
@@ -17,11 +17,11 @@ x-base: &base
     context: .
     dockerfile: FrankenPHP.Dockerfile
     args:
-      APP_ENV: 'production' # to load .env.production
-      APP_HOST: '${APP_HOST}'
+      APP_ENV: "production" # to load .env.production
+      APP_HOST: "${APP_HOST}"
       WWWUSER: ${HOST_UID:-1000}
       WWWGROUP: ${HOST_GID:-1000}
-  image: laravel/app
+  image: veridata:0.1.0
   user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
   ulimits:
     nofile:
@@ -32,8 +32,8 @@ x-base: &base
   networks:
     - stack
   volumes:
-    - './storage/app/public:/var/www/html/storage/app/public'
-    - './storage/logs:/var/www/html/storage/logs'
+    - "./storage/app/public:/var/www/html/storage/app/public"
+    - "./storage/logs:/var/www/html/storage/logs"
   logging: *default-logging
   restart: always
 
@@ -101,7 +101,7 @@ services:
   app:
     <<: *base
     healthcheck:
-      test: [ "CMD", "curl", "--fail", "localhost:8000/up" ]
+      test: ["CMD", "curl", "--fail", "localhost:8000/up"]
       interval: 3s
       retries: 12
       timeout: 5s
@@ -172,21 +172,28 @@ services:
       traefik.http.services.reverb-service.loadbalancer.server.port: 8080
   redis:
     profiles: [app]
-    image: 'redis:alpine'
+    image: "redis:alpine"
     ulimits:
       nofile:
         soft: 20000
         hard: 40000
-    command: [ "redis-server", "--requirepass", "${REDIS_PASSWORD}", "--maxmemory", "2gb" ]
+    command:
+      [
+        "redis-server",
+        "--requirepass",
+        "${REDIS_PASSWORD}",
+        "--maxmemory",
+        "2gb",
+      ]
     security_opt:
       - no-new-privileges:true
     volumes:
-      - 'stack-redis:/data'
+      - "stack-redis:/data"
     networks:
       - stack
     logging: *default-logging
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: ["CMD", "redis-cli", "ping"]
       retries: 3
       timeout: 5s
     restart: always
@@ -194,7 +201,7 @@ services:
       traefik.enable: false
   pgsql:
     profiles: [app]
-    image: 'postgres:17-bookworm'
+    image: "postgres:17-bookworm"
     ulimits:
       nofile:
         soft: 20000
@@ -203,18 +210,27 @@ services:
     security_opt:
       - no-new-privileges:true
     environment:
-      PGPASSWORD: '${DB_PASSWORD}'
-      POSTGRES_DB: '${DB_DATABASE}'
-      POSTGRES_USER: '${DB_USERNAME}'
-      POSTGRES_PASSWORD: '${DB_PASSWORD}'
+      PGPASSWORD: "${DB_PASSWORD}"
+      POSTGRES_DB: "${DB_DATABASE}"
+      POSTGRES_USER: "${DB_USERNAME}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD}"
     volumes:
       # - './postgresql.conf:/etc/postgresql/postgresql.conf'
-      - 'stack-pgsql:/var/lib/postgresql/data'
-      - '../backup:/backup'
+      - "stack-pgsql:/var/lib/postgresql/data"
+      - "../backup:/backup"
     networks:
       - stack
     healthcheck:
-      test: [ "CMD", "pg_isready", "-q", "-d", "${DB_DATABASE}", "-U", "${DB_USERNAME}"]
+      test:
+        [
+          "CMD",
+          "pg_isready",
+          "-q",
+          "-d",
+          "${DB_DATABASE}",
+          "-U",
+          "${DB_USERNAME}",
+        ]
       interval: 15s
       retries: 12
       timeout: 20s
@@ -226,18 +242,18 @@ services:
       docker-volume-backup.archive-pre: /bin/sh -c 'pg_dump -U ${DB_USERNAME} -F t ${DB_DATABASE} > /backup/${DB_DATABASE}-database.tar'
   pgadmin:
     profiles: [administration]
-    image: 'dpage/pgadmin4:latest'
+    image: "dpage/pgadmin4:latest"
     security_opt:
       - no-new-privileges:true
     depends_on:
       pgsql:
         condition: service_healthy
     environment:
-      PGADMIN_DEFAULT_EMAIL: '${PGADMIN_DEFAULT_EMAIL}'
-      PGADMIN_DEFAULT_PASSWORD: '${PGADMIN_DEFAULT_PASSWORD}'
-      PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION: 'True'
+      PGADMIN_DEFAULT_EMAIL: "${PGADMIN_DEFAULT_EMAIL}"
+      PGADMIN_DEFAULT_PASSWORD: "${PGADMIN_DEFAULT_PASSWORD}"
+      PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION: "True"
     volumes:
-      - 'stack-pgadmin:/var/lib/pgadmin'
+      - "stack-pgadmin:/var/lib/pgadmin"
     networks:
       - stack
     restart: always
@@ -279,19 +295,26 @@ services:
       traefik.http.services.pghero-service.loadbalancer.server.port: 6660
   typesense:
     profiles: [app]
-    image: 'typesense/typesense:0.25.2'
+    image: "typesense/typesense:0.25.2"
     security_opt:
       - no-new-privileges:true
     environment:
-      TYPESENSE_DATA_DIR: '${TYPESENSE_DATA_DIR:-/typesense-data}'
-      TYPESENSE_API_KEY: '${TYPESENSE_API_KEY}'
-      TYPESENSE_ENABLE_CORS: '${TYPESENSE_ENABLE_CORS:-true}'
+      TYPESENSE_DATA_DIR: "${TYPESENSE_DATA_DIR:-/typesense-data}"
+      TYPESENSE_API_KEY: "${TYPESENSE_API_KEY}"
+      TYPESENSE_ENABLE_CORS: "${TYPESENSE_ENABLE_CORS:-true}"
     volumes:
-      - 'stack-typesense:/typesense-data'
+      - "stack-typesense:/typesense-data"
     networks:
       - stack
     healthcheck:
-      test: [ "CMD", "wget", "--no-verbose", "--spider", "http://localhost:8108/health" ]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--spider",
+          "http://localhost:8108/health",
+        ]
       interval: 3s
       retries: 12
       timeout: 5s
@@ -308,7 +331,7 @@ services:
       BACKUP_FILENAME: backup-%Y-%m-%dT%H-%M-%S.tar.gz
       BACKUP_PRUNING_PREFIX: backup-
       BACKUP_CRON_EXPRESSION: "0 2 * * *" # run every day at 2am
-      BACKUP_RETENTION_DAYS: '7'
+      BACKUP_RETENTION_DAYS: "7"
     restart: always
     depends_on:
       pgsql:
@@ -324,14 +347,14 @@ services:
       traefik.enable: false
   minio:
     profiles: [app]
-    image: 'minio/minio:latest'
+    image: "minio/minio:latest"
     security_opt:
       - no-new-privileges:true
     environment:
-      MINIO_ROOT_USER: '${MINIO_ROOT_USER}'
-      MINIO_ROOT_PASSWORD: '${MINIO_ROOT_PASSWORD}'
+      MINIO_ROOT_USER: "${MINIO_ROOT_USER}"
+      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD}"
     volumes:
-      - 'stack-minio:/data/minio'
+      - "stack-minio:/data/minio"
     networks:
       - stack
     command: 'minio server /data/minio --console-address ":8900"'
@@ -358,7 +381,7 @@ services:
       traefik.http.middlewares.minio-auth.basicauth.removeheader: true
       traefik.http.middlewares.minio-auth.basicauth.users: "user:$$2y$$05$$8zbpsdxg9wDiiKdqxiB0zeAlxZtG68P1SDBOvCN4IooLFewLx70Gm" # user:123456
     healthcheck:
-      test: [ "CMD", "mc", "ready", "local" ]
+      test: ["CMD", "mc", "ready", "local"]
       retries: 3
       timeout: 5s
   glances:
@@ -438,4 +461,3 @@ volumes:
     driver: local
   stack-netdatacache:
     driver: local
-
