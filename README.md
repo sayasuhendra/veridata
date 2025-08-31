@@ -1,97 +1,42 @@
-<?php
+# Invoice and Receipt Processing Application
 
-namespace App\Filament\Resources\Invoices\Schemas;
+This is a Laravel application that automatically creates spending reports for clients by uploading invoices or receipts.
 
-use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\TextInput;
-use Filament\Schemas\Components\Fieldset;
-use Filament\Schemas\Components\Utilities\Set;
-use Filament\Schemas\Schema;
-use OpenAI\Laravel\Facades\OpenAI;
+## Features
 
-class InvoiceForm
-{
-    public static function configure(Schema $schema): Schema
-    {
-        return $schema
-            ->components([
-                FileUpload::make('original_file_path')
-                    ->label('Upload Invoice')
-                    ->disk('public')
-                    ->directory('invoices')
-                    ->required()
-                    ->afterStateUpdated(function (Set $set, $state) {
-                        if (! $state) {
-                            return;
-                        }
-                        if ($state instanceof \Illuminate\Http\UploadedFile) {
-                            $base64 = base64_encode(file_get_contents($state->getRealPath()));
+- **Filament Admin Panel**: A beautiful and extensible admin panel for managing invoices, receipts, and users.
+- **AI-Powered Data Extraction**: Uses OpenAI's GPT-4o to automatically extract data from uploaded documents.
+- **Asynchronous Job Processing**: Handles document processing in the background for a non-blocking user experience.
 
-                            $data = self::extractInvoiceData($base64, $state->getMimeType());
-                            $data = preg_replace('/^```json\s*(.*)\s*```$/s', '$1', $data);
-                            $data = json_decode($data, true);
-                            $set('vendor_name', $data['vendor_name'] ?? '');
-                            $set('invoice_id', $data['invoice_number'] ?? '');
-                            $set('invoice_date', $data['invoice_date'] ?? '');
-                            $set('due_date', $data['due_date'] ?? '');
-                            $set('total_amount', $data['total_amount'] ?? '');
-                            $set('tax_amount', $data['tax_amount'] ?? '');
-                            $set('currency', $data['currency'] ?? '');
-                        }
-                    })
-                    ->image()
-                    ->imagePreviewHeight('600')
-                    ->openable()
-                    ->maxSize(1024 * 5) // 5 MB
-                    ->acceptedFileTypes(['image/*', 'application/pdf']),
+## WhatsApp Bot Integration
 
-                Fieldset::make('Extracted Information')
-                    ->schema([
-                        TextInput::make('vendor_name'),
-                        TextInput::make('invoice_id'),
-                        DatePicker::make('invoice_date'),
-                        DatePicker::make('due_date'),
-                        TextInput::make('total_amount')->numeric()->prefix('Rp'),
-                        TextInput::make('tax_amount')->numeric()->prefix('Rp'),
-                        TextInput::make('currency')->maxLength(10),
-                    ]),
-            ]);
-    }
+This application includes a WhatsApp bot that allows users to interact with the application through WhatsApp.
 
-    public static function extractInvoiceData($base64, $fileType)
-    {
-        $response = OpenAI::chat()->create([
-            'model' => 'gpt-4o',
-            'messages' => [
-                [
-                    'role' => 'user',
-                    'content' => [
-                        [
-                            'type' => 'image_url',
-                            'image_url' => [
-                                'url' => "data:$fileType;base64,$base64",
-                            ],
-                        ],
-                        [
-                            'type' => 'text',
-                            'text' => "Extract structured data from this invoice file as JSON:\n\nReturn format:\n".
-                        json_encode([
-                            'invoice_number' => 'INV-001',
-                            'invoice_date' => '2024-06-01',
-                            'vendor_name' => 'ABC Supplies',
-                            'total_amount' => '1234.56',
-                            'line_items' => [
-                                ['item' => 'Widget A', 'qty' => 2, 'price' => 500],
-                                ['item' => 'Widget B', 'qty' => 1, 'price' => 234.56],
-                            ],
-                        ], JSON_PRETTY_PRINT),
-                        ],
-                    ],
-                ],
-            ],
-        ]);
+### Features
 
-        return $response->choices[0]->message->content;
-    }
-}
+- **Upload Invoices and Receipts**: Users can send images or PDFs of their invoices and receipts directly to the bot.
+- **Generate Reports**: Users can request daily, weekly, or monthly reports by sending a command to the bot.
+
+### How to Use
+
+1. **Start the application**:
+   ```bash
+   php artisan serve
+   ```
+2. **Start the WhatsApp bot**:
+   ```bash
+   npm run start:bot
+   ```
+3. **Scan the QR Code**: Open WhatsApp on your phone and scan the QR code that appears in the terminal to connect your phone to the bot.
+4. **Send Documents**: Send an image or PDF of an invoice or receipt to the bot. The bot will process the document and save the extracted data.
+5. **Request Reports**: Send a command to the bot to get a report:
+   - `/report daily`
+   - `/report weekly`
+   - `/report monthly`
+
+### API Endpoints
+
+The WhatsApp bot communicates with the Laravel application through the following API endpoints:
+
+- `POST /api/document`: Upload a new document for processing.
+- `GET /api/reports/{period}`: Get a report for the specified period (`daily`, `weekly`, `monthly`).
