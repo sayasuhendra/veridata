@@ -16,7 +16,6 @@ This application includes a WhatsApp bot that allows users to interact with the 
 
 - **Upload Invoices and Receipts**: Users can send images or PDFs of their invoices and receipts directly to the bot.
 - **Generate Reports**: Users can request daily, weekly, or monthly reports by sending a command to the bot.
-- **User Registration**: Users can register their WhatsApp number to their account in the application.
 
 ### How to Use
 
@@ -43,6 +42,5 @@ This application includes a WhatsApp bot that allows users to interact with the 
 
 The WhatsApp bot communicates with the Laravel application through the following API endpoints:
 
-- `POST /api/register`: Register a new user.
 - `POST /api/document`: Upload a new document for processing.
 - `GET /api/reports/{period}`: Get a report for the specified period (`daily`, `weekly`, `monthly`).
