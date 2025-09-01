@@ -8,14 +8,18 @@ use Illuminate\Support\Facades\Storage;
 use OpenAI\Laravel\Facades\OpenAI;
 use App\Models\Invoice;
 
+use App\Models\User;
+
 class DocumentController extends Controller
 {
     public function store(Request $request)
     {
         $request->validate([
             'file' => 'required|file|mimes:jpeg,png,pdf|max:5120',
+            'whatsapp_number' => 'required|string|exists:users,whatsapp_number',
         ]);
 
+        $user = User::where('whatsapp_number', $request->whatsapp_number)->firstOrFail();
         $file = $request->file('file');
         $path = $file->store('invoices', 'public');
 
@@ -26,7 +30,7 @@ class DocumentController extends Controller
         $data = preg_replace('/^```json\s*(.*)\s*```$/s', '$1', $data);
         $data = json_decode($data, true);
 
-        $invoice = Invoice::create([
+        $invoice = $user->invoices()->create([
             'vendor_name' => $data['vendor_name'] ?? null,
             'invoice_id' => $data['invoice_number'] ?? null,
             'invoice_date' => $data['invoice_date'] ?? null,
@@ -42,7 +46,12 @@ class DocumentController extends Controller
 
     public function getReport(Request $request, $period)
     {
-        $query = Invoice::query();
+        $request->validate([
+            'whatsapp_number' => 'required|string|exists:users,whatsapp_number',
+        ]);
+
+        $user = User::where('whatsapp_number', $request->whatsapp_number)->firstOrFail();
+        $query = $user->invoices();
 
         switch ($period) {
             case 'daily':
